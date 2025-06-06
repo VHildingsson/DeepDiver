@@ -18,7 +18,7 @@
                     "name": "Throttle",
                     "type": "Value",
                     "id": "cacd28b2-bb15-4647-9e16-4860076254e4",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
@@ -27,7 +27,7 @@
                     "name": "Brake",
                     "type": "Value",
                     "id": "2b91cc20-123d-4253-bec0-08f39942cf65",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
@@ -36,7 +36,7 @@
                     "name": "Ascend",
                     "type": "Button",
                     "id": "4da1cbcb-514b-4edc-b03c-99c0e2030d85",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -67,7 +67,18 @@
                     "path": "<Gamepad>/leftStick/x",
                     "interactions": "",
                     "processors": "",
-                    "groups": "SteeringWheel",
+                    "groups": "Gamepad",
+                    "action": "Steering",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "164c7f58-80fa-4ecd-8924-7492dad7e02b",
+                    "path": "<Joystick>/stick/x",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";SteeringWheel",
                     "action": "Steering",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -85,11 +96,33 @@
                 },
                 {
                     "name": "",
+                    "id": "b4081714-688a-48fa-a9b2-19d5b160032d",
+                    "path": "<HID::563 3>/stick/up",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Throttle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "a956f3fc-8d8c-4f0a-8b78-2d1679e6bafe",
                     "path": "<Gamepad>/leftTrigger",
                     "interactions": "",
                     "processors": "",
                     "groups": "SteeringWheel",
+                    "action": "Brake",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "9d3bd4ce-195a-464d-9e2c-04efb5e15b01",
+                    "path": "<HID::563 3>/rz",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
                     "action": "Brake",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -107,11 +140,33 @@
                 },
                 {
                     "name": "",
+                    "id": "645ffce2-273d-4c34-8795-6af6fb7d0624",
+                    "path": "<HID::563 3>/button3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Ascend",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "9ffa4b8b-c07c-45dd-8a2d-d18f0edc9618",
                     "path": "<Gamepad>/leftShoulder",
                     "interactions": "",
                     "processors": "",
                     "groups": "SteeringWheel",
+                    "action": "Descend",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d724aae5-bca0-4252-8dd9-3c75c62d5411",
+                    "path": "<HID::563 3>/button7",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
                     "action": "Descend",
                     "isComposite": false,
                     "isPartOfComposite": false
