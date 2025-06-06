@@ -1,6 +1,8 @@
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.XR;
+using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -38,6 +40,11 @@ public class SubmarineController : MonoBehaviour
     public XROrigin xrOrigin; // VR camera rig
     public Camera vrCamera; // The actual VR camera
 
+    [Header("VR Camera Settings")]
+    public Vector3 vrCameraLocalPosition = new Vector3(0, 1.6f, 0); // Default head height
+    public bool maintainInitialOffset = true;
+    private Vector3 initialCameraOffset;
+
     [Header("Controller Look Settings")]
     public bool simulateVR = true;
     public float lookSensitivity = 100f;
@@ -66,11 +73,66 @@ public class SubmarineController : MonoBehaviour
         if (xrOrigin != null)
         {
             vrCamera = xrOrigin.Camera;
+
+            // Store initial offset if needed
+            if (maintainInitialOffset)
+            {
+                initialCameraOffset = xrOrigin.Camera.transform.localPosition;
+            }
+            else
+            {
+                xrOrigin.CameraYOffset = vrCameraLocalPosition.y;
+            }
+
+            // Parent the XR Origin to the submarine but maintain world position
+            xrOrigin.transform.SetParent(transform, true);
+
+            // Reset local position to zero (relative to submarine)
+            xrOrigin.transform.localPosition = Vector3.zero;
+            xrOrigin.transform.localRotation = Quaternion.identity;
+
+            // Apply the desired camera position
+            if (!maintainInitialOffset)
+            {
+                xrOrigin.Camera.transform.localPosition = vrCameraLocalPosition;
+            }
+
             xrOrigin.gameObject.SetActive(vrMode);
         }
 
-        // Ensure proper camera state
         if (subCamera != null) subCamera.enabled = !vrMode;
+    }
+
+    void LateUpdate()
+    {
+        if (vrMode && xrOrigin != null)
+        {
+            // This ensures the camera stays properly positioned while allowing head tracking
+            xrOrigin.MoveCameraToWorldLocation(transform.position);
+
+            // If you want to maintain a specific local offset
+            if (maintainInitialOffset)
+            {
+                xrOrigin.Camera.transform.localPosition = initialCameraOffset;
+            }
+        }
+    }
+
+    void Start()
+    {
+        PositionVRCamera();
+    }
+
+    void PositionVRCamera()
+    {
+        if (!vrMode || xrOrigin == null) return;
+
+        // Reset any tracking offsets
+        xrOrigin.MoveCameraToWorldLocation(transform.position);
+        xrOrigin.MatchOriginUpCameraForward(transform.up, transform.forward);
+
+        // If you want the camera at a specific offset from the submarine
+        // xrOrigin.Camera.transform.localPosition = new Vector3(0, 1.6f, 0); // Example: 1.6m up
     }
 
     void EnableInputs()
