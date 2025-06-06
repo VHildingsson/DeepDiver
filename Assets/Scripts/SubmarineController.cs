@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR;
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
 public class SubmarineController : MonoBehaviour
@@ -41,9 +42,19 @@ public class SubmarineController : MonoBehaviour
     public Camera vrCamera; // The actual VR camera
 
     [Header("VR Camera Settings")]
-    public Vector3 vrCameraLocalPosition = new Vector3(0, 1.6f, 0); // Default head height
-    public bool maintainInitialOffset = true;
-    private Vector3 initialCameraOffset;
+    [Tooltip("Local position offset for VR camera relative to submarine")]
+    public Vector3 vrCameraLocalOffset = new Vector3(0, 1.6f, 0);
+    [Tooltip("If true, maintains the offset set in the editor")]
+    public bool useEditorOffset = false;
+    private Vector3 editorCameraOffset;
+    private bool isXrOriginInitialized = false;
+    [Tooltip("Should the camera maintain its editor position?")]
+    public bool maintainEditorPosition = true;
+    [Tooltip("Manual camera offset if not using editor position")]
+    public Vector3 manualCameraOffset = new Vector3(0, 1.6f, 0.2f);
+
+    private Vector3 initialCameraLocalPosition;
+    private Quaternion initialCameraLocalRotation;
 
     [Header("Controller Look Settings")]
     public bool simulateVR = true;
@@ -70,19 +81,14 @@ public class SubmarineController : MonoBehaviour
 
         // Initialize camera references
         if (subCamera == null) subCamera = GetComponentInChildren<Camera>();
+
         if (xrOrigin != null)
         {
             vrCamera = xrOrigin.Camera;
 
-            // Store initial offset if needed
-            if (maintainInitialOffset)
-            {
-                initialCameraOffset = xrOrigin.Camera.transform.localPosition;
-            }
-            else
-            {
-                xrOrigin.CameraYOffset = vrCameraLocalPosition.y;
-            }
+            // Store initial camera transform BEFORE any XR initialization
+            initialCameraLocalPosition = vrCamera.transform.localPosition;
+            initialCameraLocalRotation = vrCamera.transform.localRotation;
 
             // Parent the XR Origin to the submarine but maintain world position
             xrOrigin.transform.SetParent(transform, true);
@@ -91,13 +97,8 @@ public class SubmarineController : MonoBehaviour
             xrOrigin.transform.localPosition = Vector3.zero;
             xrOrigin.transform.localRotation = Quaternion.identity;
 
-            // Apply the desired camera position
-            if (!maintainInitialOffset)
-            {
-                xrOrigin.Camera.transform.localPosition = vrCameraLocalPosition;
-            }
-
             xrOrigin.gameObject.SetActive(vrMode);
+            isXrOriginInitialized = true;
         }
 
         if (subCamera != null) subCamera.enabled = !vrMode;
@@ -105,22 +106,70 @@ public class SubmarineController : MonoBehaviour
 
     void LateUpdate()
     {
-        if (vrMode && xrOrigin != null)
-        {
-            // This ensures the camera stays properly positioned while allowing head tracking
-            xrOrigin.MoveCameraToWorldLocation(transform.position);
+        if (!vrMode || !isXrOriginInitialized || xrOrigin == null) return;
 
-            // If you want to maintain a specific local offset
-            if (maintainInitialOffset)
+        // Constantly verify the camera hasn't drifted
+        if (maintainEditorPosition)
+        {
+            if (Vector3.Distance(vrCamera.transform.localPosition, initialCameraLocalPosition) > 0.01f)
             {
-                xrOrigin.Camera.transform.localPosition = initialCameraOffset;
+                vrCamera.transform.localPosition = initialCameraLocalPosition;
+            }
+        }
+        else
+        {
+            if (Vector3.Distance(vrCamera.transform.localPosition, manualCameraOffset) > 0.01f)
+            {
+                vrCamera.transform.localPosition = manualCameraOffset;
             }
         }
     }
 
+    private bool IsValidTransform(Transform t)
+    {
+        return float.IsFinite(t.position.x) && float.IsFinite(t.position.y) && float.IsFinite(t.position.z) &&
+               float.IsFinite(t.rotation.x) && float.IsFinite(t.rotation.y) && float.IsFinite(t.rotation.z) && float.IsFinite(t.rotation.w);
+    }
+
+    private void ResetVRCamera()
+    {
+        if (xrOrigin == null) return;
+
+        xrOrigin.transform.localPosition = Vector3.zero;
+        xrOrigin.transform.localRotation = Quaternion.identity;
+        vrCamera.transform.localPosition = useEditorOffset ? editorCameraOffset : vrCameraLocalOffset;
+        vrCamera.transform.localRotation = Quaternion.identity;
+
+        Debug.Log("VR Camera was reset due to invalid state");
+    }
+
     void Start()
     {
-        PositionVRCamera();
+        if (vrMode && xrOrigin != null)
+        {
+            // Wait one frame to ensure XR is initialized
+            StartCoroutine(DelayedCameraPositioning());
+        }
+    }
+    IEnumerator DelayedCameraPositioning()
+    {
+        // Wait for end of frame to ensure XR is fully initialized
+        yield return new WaitForEndOfFrame();
+
+        if (maintainEditorPosition)
+        {
+            vrCamera.transform.localPosition = initialCameraLocalPosition;
+            vrCamera.transform.localRotation = initialCameraLocalRotation;
+        }
+        else
+        {
+            vrCamera.transform.localPosition = manualCameraOffset;
+            vrCamera.transform.localRotation = Quaternion.identity;
+        }
+
+        // Force update the tracking origin
+        xrOrigin.MoveCameraToWorldLocation(transform.TransformPoint(vrCamera.transform.localPosition));
+        xrOrigin.MatchOriginUpCameraForward(transform.up, transform.forward);
     }
 
     void PositionVRCamera()

@@ -1018,7 +1018,7 @@ MonoBehaviour:
   m_OriginBaseGameObject: {fileID: 605132316}
   m_CameraFloorOffsetObject: {fileID: 1653294783}
   m_RequestedTrackingOriginMode: 1
-  m_CameraYOffset: 1.1176
+  m_CameraYOffset: 0
 --- !u!64 &609054015
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1326,7 +1326,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7edbca904aaa93d4283359dcec1b2b76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSpeed: 3
+  maxSpeed: 5
   turnRate: 15
   acceleration: 2
   deceleration: 1
@@ -1339,6 +1339,10 @@ MonoBehaviour:
   subCamera: {fileID: 1647033362}
   xrOrigin: {fileID: 605132319}
   vrCamera: {fileID: 1975795983}
+  vrCameraLocalOffset: {x: 0, y: 1.6, z: 0}
+  useEditorOffset: 0
+  maintainEditorPosition: 1
+  manualCameraOffset: {x: 0, y: 1.6, z: 0.2}
   simulateVR: 0
   lookSensitivity: 80
   maxLookAngle: 80
@@ -3909,7 +3913,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2fadf230d1919748a9aa21d40f74619, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_TrackingType: 0
+  m_TrackingType: 1
   m_UpdateType: 0
   m_IgnoreTrackingState: 0
   m_PositionInput:
@@ -4047,7 +4051,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 1000
-  field of view: 60
+  field of view: 80.2
   orthographic: 0
   orthographic size: 5
   m_Depth: 0

@@ -122,7 +122,7 @@
                     "path": "<HID::563 3>/rz",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";SteeringWheel",
                     "action": "Brake",
                     "isComposite": false,
                     "isPartOfComposite": false
