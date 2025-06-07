@@ -1,132 +1,223 @@
 using UnityEngine;
 using System.Collections;
 
-public class FishAI : MonoBehaviour
+public class CaveFishAI : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float swimSpeed = 3f;          // Base swimming speed
-    public float turnSpeed = 2f;          // How quickly the fish can turn
-    public float minSwimTime = 2f;        // Minimum time between direction changes
-    public float maxSwimTime = 5f;        // Maximum time between direction changes
-    public float obstacleAvoidDistance = 2f; // Distance to check for obstacles
-    public float obstacleAvoidForce = 5f;  // How strongly to avoid obstacles
+    public float swimSpeed = 3f;           // Base swimming speed
+    public float turnSpeed = 3f;           // How quickly the fish can turn
+    public float minSwimTime = 1f;         // Minimum time between direction changes
+    public float maxSwimTime = 4f;         // Maximum time between direction changes
+    public float idleTime = 0.5f;          // Short pause sometimes at waypoints
 
-    [Header("Wandering Settings")]
-    public float wanderRadius = 10f;       // Area the fish will stay within
-    public float wanderJitter = 1f;       // Randomness in wandering
-    public float depthVariation = 3f;      // How much the fish can vary its depth
+    [Header("Obstacle Avoidance")]
+    public float lookAheadDistance = 3f;   // How far to check for obstacles
+    public float sideCastAngle = 30f;     // Angle for side obstacle checks
+    public float avoidanceForce = 5f;      // How strongly to avoid obstacles
+    public float minDistanceToWall = 0.5f; // Preferred distance from walls/props
 
-    private Vector3 spawnPosition;         // Where the fish was spawned
-    private Vector3 currentDirection;      // Current swimming direction
-    private Vector3 targetDirection;       // Direction the fish wants to go
-    private float directionChangeTimer;    // Timer for direction changes
-    private float currentSwimTime;         // Current time until next direction change
+    [Header("Path Following")]
+    public float waypointRadius = 5f;      // How close to get to waypoint
+    public float depthVariation = 2f;      // How much vertical movement is allowed
 
-    private void Start()
+    private Vector3 currentDirection;
+    private Vector3 targetDirection;
+    private Vector3 currentWaypoint;
+    private float directionChangeTimer;
+    private bool isIdle;
+    private float idleTimer;
+
+    void Start()
     {
-        spawnPosition = transform.position;
         currentDirection = transform.forward;
-        targetDirection = GetRandomDirection();
-        SetNewSwimTime();
+        targetDirection = GetNewDirection();
+        currentWaypoint = FindNewWaypoint();
+        directionChangeTimer = Random.Range(minSwimTime, maxSwimTime);
     }
 
-    private void Update()
+    void Update()
     {
-        // Count down to next direction change
-        directionChangeTimer -= Time.deltaTime;
-
-        if (directionChangeTimer <= 0)
+        if (isIdle)
         {
-            // Get a new direction when timer runs out
-            targetDirection = GetRandomDirection();
-            SetNewSwimTime();
+            idleTimer -= Time.deltaTime;
+            if (idleTimer <= 0) isIdle = false;
+            return;
         }
 
-        // Avoid obstacles
+        directionChangeTimer -= Time.deltaTime;
+
+        if (directionChangeTimer <= 0 || Vector3.Distance(transform.position, currentWaypoint) < waypointRadius)
+        {
+            /*if (Random.value < 0.1f) // 10% chance to idle briefly
+            {
+                isIdle = true;
+                idleTimer = idleTime;
+            }*/
+
+            currentWaypoint = FindNewWaypoint();
+            targetDirection = (currentWaypoint - transform.position).normalized;
+            directionChangeTimer = Random.Range(minSwimTime, maxSwimTime);
+        }
+
+        // Enhanced obstacle avoidance
         AvoidObstacles();
 
-        // Smoothly turn toward target direction
+        // Smooth direction change
         currentDirection = Vector3.Slerp(currentDirection, targetDirection, turnSpeed * Time.deltaTime);
 
         // Move forward
-        transform.Translate(Vector3.forward * swimSpeed * Time.deltaTime);
+        transform.position += currentDirection * swimSpeed * Time.deltaTime;
 
-        // Rotate to face direction (with slight tilt for more natural movement)
-        Quaternion lookRotation = Quaternion.LookRotation(currentDirection);
-        Quaternion tilt = Quaternion.Euler(Random.Range(-5f, 5f), 0, Random.Range(-5f, 5f));
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation * tilt, turnSpeed * Time.deltaTime);
+        // Rotate to face direction (with natural-looking slight variation)
+        if (currentDirection != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(currentDirection);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation * Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 2f) * 5f),
+                turnSpeed * Time.deltaTime
+            );
+        }
     }
 
-    private Vector3 GetRandomDirection()
+    Vector3 FindNewWaypoint()
     {
-        // Create a somewhat random direction within the wander radius
-        Vector3 randomPoint = spawnPosition + Random.insideUnitSphere * wanderRadius;
+        // Try to find a direction that follows the cave system
+        Vector3 waypointDirection = GetCaveFollowingDirection();
 
-        // Add some depth variation
-        randomPoint.y = spawnPosition.y + Random.Range(-depthVariation, depthVariation);
+        // Add some randomness but bias toward forward movement
+        waypointDirection += new Vector3(
+            Random.Range(-1f, 1f),
+            Random.Range(-0.5f, 0.5f),
+            Random.Range(-0.5f, 1f) // Prefer forward movement
+        ).normalized * 0.3f;
 
-        // Add some wandering jitter to current direction
-        Vector3 direction = (randomPoint - transform.position).normalized;
-        direction += new Vector3(
-            Random.Range(-wanderJitter, wanderJitter),
-            Random.Range(-wanderJitter / 2f, wanderJitter / 2f),
-            Random.Range(-wanderJitter, wanderJitter)
-        );
+        waypointDirection.Normalize();
 
-        return direction.normalized;
+        // Find a point ahead in the cave system
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, waypointDirection, out hit, lookAheadDistance * 3f))
+        {
+            // Aim for a point near the wall but not too close
+            return hit.point + hit.normal * minDistanceToWall;
+        }
+
+        // Fallback to random point ahead
+        return transform.position + waypointDirection * lookAheadDistance * 2f;
     }
 
-    private void AvoidObstacles()
+    Vector3 GetCaveFollowingDirection()
+    {
+        // Cast rays in multiple directions to determine cave shape
+        Vector3 forward = transform.forward;
+        Vector3 right = transform.right;
+        Vector3 up = transform.up;
+
+        float[] distances = new float[5];
+        Vector3[] directions = new Vector3[5] {
+            forward,
+            Quaternion.AngleAxis(sideCastAngle, up) * forward,
+            Quaternion.AngleAxis(-sideCastAngle, up) * forward,
+            Quaternion.AngleAxis(sideCastAngle, right) * forward,
+            Quaternion.AngleAxis(-sideCastAngle, right) * forward
+        };
+
+        // Find the most open path
+        float maxDistance = 0;
+        Vector3 bestDirection = forward;
+
+        for (int i = 0; i < directions.Length; i++)
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, directions[i], out hit, lookAheadDistance))
+            {
+                distances[i] = hit.distance;
+                // Prefer directions that have more space
+                if (hit.distance > maxDistance)
+                {
+                    maxDistance = hit.distance;
+                    bestDirection = directions[i];
+                }
+            }
+            else
+            {
+                // No hit means open space - prefer this direction
+                return directions[i];
+            }
+        }
+
+        return bestDirection;
+    }
+
+    void AvoidObstacles()
     {
         RaycastHit hit;
+        Vector3 avoidanceVector = Vector3.zero;
+        float weightSum = 0f;
 
-        // Check for obstacles in front
-        if (Physics.Raycast(transform.position, transform.forward, out hit, obstacleAvoidDistance))
+        // Check multiple directions
+        Vector3[] checkDirections = new Vector3[] {
+            transform.forward,
+            transform.forward + transform.right * 0.5f,
+            transform.forward - transform.right * 0.5f,
+            transform.forward + transform.up * 0.3f,
+            transform.forward - transform.up * 0.3f
+        };
+
+        foreach (Vector3 dir in checkDirections)
         {
-            // Calculate avoidance direction
-            Vector3 avoidDirection = Vector3.Reflect(transform.forward, hit.normal);
-            avoidDirection.y = 0; // Keep mostly horizontal
-            avoidDirection.Normalize();
+            if (Physics.Raycast(transform.position, dir, out hit, lookAheadDistance))
+            {
+                float weight = 1f - (hit.distance / lookAheadDistance);
+                avoidanceVector += hit.normal * weight;
+                weightSum += weight;
+            }
+        }
 
-            // Add some randomness
-            avoidDirection += new Vector3(
-                Random.Range(-0.5f, 0.5f),
-                Random.Range(-0.2f, 0.5f),
-                Random.Range(-0.5f, 0.5f)
-            );
-            avoidDirection.Normalize();
-
-            // Blend the avoidance direction with current target
-            targetDirection = Vector3.Lerp(targetDirection, avoidDirection, obstacleAvoidForce * Time.deltaTime);
-            targetDirection.Normalize();
-
-            // Change direction sooner if we hit something
-            directionChangeTimer *= 0.5f;
+        if (weightSum > 0)
+        {
+            avoidanceVector /= weightSum;
+            targetDirection = Vector3.Lerp(
+                targetDirection,
+                avoidanceVector.normalized,
+                avoidanceForce * Time.deltaTime
+            ).normalized;
         }
     }
 
-    private void SetNewSwimTime()
+    Vector3 GetNewDirection()
     {
-        directionChangeTimer = Random.Range(minSwimTime, maxSwimTime);
-        currentSwimTime = directionChangeTimer;
+        // Try to follow the cave system
+        Vector3 caveDir = GetCaveFollowingDirection();
+
+        // Add some variation
+        return (caveDir + Random.insideUnitSphere * 0.3f).normalized;
     }
 
-    // Visualize wander radius and obstacle detection in editor
-    private void OnDrawGizmosSelected()
+    void OnDrawGizmosSelected()
     {
-        if (Application.isPlaying)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(spawnPosition, wanderRadius);
-        }
-        else
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(transform.position, wanderRadius);
-        }
+        // Draw waypoint
+        Gizmos.color = Color.green;
+        Gizmos.DrawSphere(currentWaypoint, 0.2f);
+        Gizmos.DrawLine(transform.position, currentWaypoint);
+
+        // Draw movement direction
+        Gizmos.color = Color.blue;
+        Gizmos.DrawRay(transform.position, currentDirection * 2f);
 
         // Draw obstacle detection
         Gizmos.color = Color.yellow;
-        Gizmos.DrawRay(transform.position, transform.forward * obstacleAvoidDistance);
+        Vector3[] checkDirections = new Vector3[] {
+            transform.forward,
+            transform.forward + transform.right * 0.5f,
+            transform.forward - transform.right * 0.5f,
+            transform.forward + transform.up * 0.3f,
+            transform.forward - transform.up * 0.3f
+        };
+
+        foreach (Vector3 dir in checkDirections)
+        {
+            Gizmos.DrawRay(transform.position, dir * lookAheadDistance);
+        }
     }
 }
