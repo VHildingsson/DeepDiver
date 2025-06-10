@@ -45,7 +45,7 @@
                     "name": "Descend",
                     "type": "Button",
                     "id": "1045b78c-ad30-4f20-b54e-06e29f0b8934",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
