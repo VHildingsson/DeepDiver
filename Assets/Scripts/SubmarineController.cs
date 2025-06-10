@@ -172,17 +172,6 @@ public class SubmarineController : MonoBehaviour
         xrOrigin.MatchOriginUpCameraForward(transform.up, transform.forward);
     }
 
-    void PositionVRCamera()
-    {
-        if (!vrMode || xrOrigin == null) return;
-
-        // Reset any tracking offsets
-        xrOrigin.MoveCameraToWorldLocation(transform.position);
-        xrOrigin.MatchOriginUpCameraForward(transform.up, transform.forward);
-
-        // If you want the camera at a specific offset from the submarine
-        // xrOrigin.Camera.transform.localPosition = new Vector3(0, 1.6f, 0); // Example: 1.6m up
-    }
 
     void EnableInputs()
     {
@@ -196,7 +185,7 @@ public class SubmarineController : MonoBehaviour
 
     void Update()
     {
-        // Handle controller look in non-VR mode
+
         if (!vrMode && simulateVR)
         {
             lookInput = lookAction.ReadValue<Vector2>();
@@ -279,12 +268,7 @@ public class SubmarineController : MonoBehaviour
         rb.AddForce(Vector3.up * currentBuoyancy * rb.mass, ForceMode.Force);
     }
 
-    public void ToggleVRMode(bool enableVR)
-    {
-        vrMode = enableVR;
-        if (xrOrigin != null) xrOrigin.gameObject.SetActive(vrMode);
-        if (subCamera != null) subCamera.enabled = !vrMode;
-    }
+
 void OnGUI()
     {
         GUILayout.BeginArea(new Rect(10, 10, 300, 200));

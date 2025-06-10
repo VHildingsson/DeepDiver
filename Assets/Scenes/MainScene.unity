@@ -1625,9 +1625,9 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 1.0194346
-  m_Height: 2.0153224
+  m_Height: 1.707358
   m_Direction: 2
-  m_Center: {x: 0.008620739, y: 0.0054898025, z: 0.21879919}
+  m_Center: {x: 0.008620739, y: 0.0054898025, z: 0.06481644}
 --- !u!23 &745233179
 MeshRenderer:
   m_ObjectHideFlags: 0
